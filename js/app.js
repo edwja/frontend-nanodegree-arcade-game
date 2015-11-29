@@ -1,67 +1,86 @@
-var Actor = function() {
+var Actor = function(sprite) {
+  this.sprite = sprite;
+  this.vx = 0;
+  this.vy = 0;
+};
 
+Actor.prototype.update = function(dt) {
+  this.x = this.x + dt * this.vx;
+  this.y = this.y + dt * this.vy;
+};
+
+Actor.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 
 // Enemies our player must avoid
 var Enemy = function() {
-    // Variables applied to each of our instances go here,
-    // we've provided one for you to get started
+  Actor.call(this, 'images/enemy-bug.png');
+  this.init();
+};
+Enemy.prototype = Object.create(Actor.prototype);
+Enemy.prototype.constructor = Enemy;
 
-
-    // The image/sprite for our enemies, this uses
-    // a helper we've provided to easily load images
-    this.sprite = 'images/enemy-bug.png';
-    this.spriteWidth = 101;
-
-    // row is 1..3 representing which stone row this enemy runs on
-    this.row = Math.floor(Math.random() * 3) + 1;
-
-    // pos is the horizontal position (across the board)
-    this.pos = Math.random() * 515 - this.spriteWidth;
-
-    this.velocity = Math.random() * 200 + 100;
+Enemy.prototype.init = function() {
+  this.x = -101;
+  var row = Math.floor(Math.random() * 3) + 1;
+  this.y = row * 83 - 20;
+  this.vx = Math.random() * 200 + 100;
 };
 
 // Update the enemy's position, required method for game
 // Parameter: dt, a time delta between ticks
 Enemy.prototype.update = function(dt) {
-    // You should multiply any movement by the dt parameter
-    // which will ensure the game runs at the same speed for
-    // all computers.
+  // update the position based on standard movement rules
+  Actor.prototype.update.call(this, dt);
 
-    // field width is canvas.width (505) plus width of the sprite (101)
-    // so he can appear to go off the end
-    var fieldWidth = ctx.canvas.width + this.spriteWidth;
-    this.pos = this.pos + this.velocity * dt;
+  this.checkPlayer();
 
-    this.x = this.pos % fieldWidth - this.spriteWidth;
-    this.y = this.row * 83 - 20;
+  // if we go off the end. re-initialize
+  if (this.x > 515) {
+    this.init();
+  }
+
+  // if we are about to bump anyone, slow down.
+  allEnemies.forEach(function(e) {
+    if (this !== e) {
+      // not looking at ourself
+      if (this.y == e.y) {
+        // on the same row
+        if (Math.abs(this.x - e.x) < 101 && this.vx > e.vx) {
+          // we are about to collide and we are faster
+          // make sure we are not touching
+          this.x = e.x - 101;
+          // and slow down
+          this.vx = e.vx;
+        }
+      }
+    }
+  }, this);
 };
 
-// Draw the enemy on the screen, required method for game
-Enemy.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+Enemy.prototype.checkPlayer = function() {
+  if (Math.abs(this.x - player.x) < 101 && Math.abs(this.y - player.y) < 83) {
+    console.log("YOU LOSE!");
+  }
 };
 
-// Now write your own player class
-// This class requires an update(), render() and
-// a handleInput() method
 var Player = function() {
-  this.sprite = 'images/char-boy.png';
+  Actor.call(this, 'images/char-boy.png');
+
   this.row = 4;
   this.col = 2;
-  this.vx = 0;
-  this.vy = 0;
   this.speed = 300;
 
   // initial position
   this.x = this.col * 101;
   this.y = this.row * 83 - 20;
 };
+Player.prototype = Object.create(Actor.prototype);
+Player.prototype.contructor = Player;
 
 Player.prototype.update = function(dt) {
-  this.x = this.x + dt * this.vx;
-  this.y = this.y + dt * this.vy;
+  Actor.prototype.update.call(this, dt);
 
   // stop moving when you get to the goal square
   if (Math.abs(this.x - this.col * 101) < Math.abs(dt * this.vx)) {
@@ -72,10 +91,14 @@ Player.prototype.update = function(dt) {
     this.y = this.row * 83 - 20;
     this.vy = 0;
   }
+
+  this.checkSuccess();
 };
 
-Player.prototype.render = function() {
-  ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+Player.prototype.checkSuccess = function() {
+  if (this.y < 63) {
+    //console.log("YOU WIN!");
+  }
 };
 
 Player.prototype.handleInput = function(key) {
@@ -111,7 +134,7 @@ Player.prototype.handleInput = function(key) {
 // Place the player object in a variable called player
 var allEnemies = [];
 var i;
-for (i = 0; i < 5; i++) {
+for (i = 0; i < 3; i++) {
   allEnemies.push(new Enemy());
 }
 
