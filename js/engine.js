@@ -23,7 +23,10 @@ var Engine = (function(global) {
         win = global.window,
         canvas = doc.createElement('canvas'),
         ctx = canvas.getContext('2d'),
-        lastTime;
+        lastTime,
+        running = true,
+        message,
+        timeoutID = 0;
 
     canvas.width = 505;
     canvas.height = 606;
@@ -32,32 +35,34 @@ var Engine = (function(global) {
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
      */
-    function main() {
-        /* Get our time delta information which is required if your game
-         * requires smooth animation. Because everyone's computer processes
-         * instructions at different speeds we need a constant value that
-         * would be the same for everyone (regardless of how fast their
-         * computer is) - hurray time!
-         */
-        var now = Date.now(),
-            dt = (now - lastTime) / 1000.0;
+     function main() {
+       /* Get our time delta information which is required if your game
+       * requires smooth animation. Because everyone's computer processes
+       * instructions at different speeds we need a constant value that
+       * would be the same for everyone (regardless of how fast their
+       * computer is) - hurray time!
+       */
+       var now = Date.now(),
+       dt = (now - lastTime) / 1000.0;
 
-        /* Call our update/render functions, pass along the time delta to
+       if (running) {
+         /* Call our update/render functions, pass along the time delta to
          * our update function since it may be used for smooth animation.
          */
-        update(dt);
-        render();
+         update(dt);
+         render();
 
-        /* Set our lastTime variable which is used to determine the time delta
+         /* Set our lastTime variable which is used to determine the time delta
          * for the next time this function is called.
          */
-        lastTime = now;
+         lastTime = now;
 
-        /* Use the browser's requestAnimationFrame function to call this
+         /* Use the browser's requestAnimationFrame function to call this
          * function again as soon as the browser is able to draw another frame.
          */
-        win.requestAnimationFrame(main);
-    }
+       }
+       win.requestAnimationFrame(main);
+     }
 
     /* This function does some initial setup that should only occur once,
      * particularly setting the lastTime variable that is required for the
@@ -138,6 +143,19 @@ var Engine = (function(global) {
 
 
         renderEntities();
+
+        if (message) {
+          ctx.save();
+          ctx.font = "36pt Impact";
+          ctx.textAlign = "center";
+          ctx.fillStyle = "white";
+          ctx.fillText(message, 252.5, 300);
+
+          ctx.strokeStyle = "black";
+          ctx.lineWidth = 3;
+          ctx.strokeText(message, 252.5, 300);
+          ctx.restore();
+        }
     }
 
     /* This function is called by the render function and is called on each game
@@ -160,7 +178,33 @@ var Engine = (function(global) {
      * those sorts of things. It's only called once by the init() method.
      */
     function reset() {
-        // noop
+      start();
+    }
+
+    /*
+     * stop the loop
+     */
+    function stop(m) {
+      running = false;
+      message = m;
+
+      timeoutID = win.setTimeout(start, 2000);
+    }
+
+    /*
+     * start the loop
+     */
+    function start() {
+      if (timeoutID) {
+        win.clearTimeout(timeoutID);
+      }
+
+      player.init();
+      allEnemies.forEach(function(e) {
+        e.init();
+      });
+      message = "";
+      running = true;
     }
 
     /* Go ahead and load all of the images we know we're going to need to
@@ -181,4 +225,10 @@ var Engine = (function(global) {
      * from within their app.js files.
      */
     global.ctx = ctx;
+
+    return {
+      stop: stop,
+      start: start,
+    };
+
 })(this);
