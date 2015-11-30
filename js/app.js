@@ -31,7 +31,7 @@ Enemy.prototype.init = function() {
 
   var row = Math.floor(Math.random() * 3) + 1;
   this.y = row * 83 - this.yOffset;
-  this.vx = Math.random() * 200 + 100;
+  this.vx = Math.random() * 500 + 100;
 };
 
 // Update the enemy's position, required method for game
@@ -80,9 +80,9 @@ Player.prototype = Object.create(Actor.prototype);
 Player.prototype.contructor = Player;
 
 Player.prototype.init = function() {
-  this.row = 4;
+  this.row = 5;
   this.col = 2;
-  this.velocity = 300;
+  this.velocity = 1000;
   this.yOffset = 10;
 
   // initial position
@@ -150,7 +150,7 @@ Player.prototype.handleInput = function(key) {
       }
       break;
     case 'down':
-      if (this.row < 4) {
+      if (this.row < 5) {
         this.row = this.row + 1;
         this.vx = 0;
         this.vy = this.velocity;
@@ -168,7 +168,7 @@ Player.prototype.handleInput = function(key) {
 var allEnemies = [];
 
 var i;
-for (i = 0; i < 3; i++) {
+for (i = 0; i < 5; i++) {
   allEnemies.push(new Enemy());
 }
 var player = new Player();
