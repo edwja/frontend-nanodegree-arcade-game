@@ -1,188 +1,249 @@
+////////////////////////////////////////////////////////////////////////////////
+// Actor - this is the base class for things that move around on the field
+////////////////////////////////////////////////////////////////////////////////
+
 var Actor = function(sprite) {
+  // sprite - the image file depicting this actor
   this.sprite = sprite;
+
+  // (xt,yt) - the target position, i.e. where to move to
+  this.xt = 0;
+  this.yt = 0;
+
+  // (x,y) - current position
+  this.x = 0;
+  this.y = 0;
+
+  // (vx,vy) - current velocity
   this.vx = 0;
   this.vy = 0;
+
+  // velocity - how fast this actor moves
+  this.velocity = 0;
+
+  this.init();
 };
 
-Actor.prototype.log = function(name) {
-  console.log(name+"("+this.x+", "+this.y+")");
+// init() - customize the actor's initial state
+Actor.prototype.init = function() {
+  // nothing to do
 };
 
+// update(dt) - update the actor's position after a delta of time
 Actor.prototype.update = function(dt) {
   this.x = this.x + dt * this.vx;
   this.y = this.y + dt * this.vy;
+
+  this.afterUpdate();
+
+  if (Math.abs(this.x - this.xt) < Math.abs(dt * this.vx)) {
+    // we are at the target x
+    this.x = this.xt;
+    this.vx = 0;
+  }
+
+  if (Math.abs(this.y - this.yt) < Math.abs(dt * this.vy)) {
+    // we are at the target y
+    this.y = this.yt;
+    this.vy = 0;
+  }
+
+  if (this.vx == 0 && this.vy == 0) {
+    this.afterStop();
+  }
 };
 
+// afterUpdate() - called after the actor updates position
+Actor.prototype.afterUpdate = function() {
+  //
+};
+
+// afterStop() - called after the actor stops its move
+Actor.prototype.afterStop = function() {
+  //
+};
+
+// render() - render the sprite in the current position
 Actor.prototype.render = function() {
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 
-// Enemies our player must avoid
+// setPos() - set the actor's current location and stop it
+Actor.prototype.setPos = function(row, col) {
+  this.x = col * 101;
+  this.y = row * 83;
+  this.xt = this.x;
+  this.yt = this.y;
+
+  this.vx = this.yv = 0;
+};
+
+// moveTo() - set the actor's target location
+Actor.prototype.moveTo = function(row, col) {
+  this.xt = col * 101;
+  this.yt = row * 83;
+
+  this.vx = this.vy = 0;
+
+  var dx = this.xt - this.x;
+  var dy = this.yt - this.y;
+
+  var distance = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+
+  if (distance > 0) {
+    this.vx = this.velocity * dx / distance;
+    this.vy = this.velocity * dy / distance;
+  }
+};
+
+// moveBy() - set the actor's target relative to the existing target
+Actor.prototype.moveBy = function(deltaRow, deltaCol) {
+  this.moveTo(this.getRow() + deltaRow, this.getCol() + deltaCol);
+};
+
+// getRow() - get the target row
+Actor.prototype.getRow = function() {
+  return this.yt / 83;
+}
+
+// getCol() - get the target columns
+Actor.prototype.getCol = function() {
+  return this.xt / 101;
+}
+
+// collidesWith() - true if the actor is colliding with another
+Actor.prototype.collidesWith = function(actor) {
+  if (this === actor) {
+    return false;
+  }
+  if (Math.abs(this.x - actor.x) < 80 &&
+      Math.abs(this.y - actor.y) < 20) {
+        return true;
+  } else {
+    return false;
+  }
+};
+
+// log() - log the actor's position
+Actor.prototype.log = function(name) {
+  console.log(this);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Enemy - this represents the bad guys
+////////////////////////////////////////////////////////////////////////////////
+
 var Enemy = function() {
   Actor.call(this, 'images/enemy-bug.png');
-  this.init();
 };
 Enemy.prototype = Object.create(Actor.prototype);
 Enemy.prototype.constructor = Enemy;
 
+// init() - randomly pick the starting row and speed, start off screen
 Enemy.prototype.init = function() {
-  this.yOffset = 20;
-  this.x = -101;
+  var row = Math.floor(Math.random() * 3) + 1,
+      col = -1,
+      velocity = Math.random() * 500 + 100;
 
-  var row = Math.floor(Math.random() * 3) + 1;
-  this.y = row * 83 - this.yOffset;
-  this.vx = Math.random() * 500 + 100;
+  this.setPos(row, col);
+  this.velocity = velocity;
+  this.moveTo(row, 6);
 };
 
-// Update the enemy's position, required method for game
-// Parameter: dt, a time delta between ticks
-Enemy.prototype.update = function(dt) {
-  // update the position based on standard movement rules
-  Actor.prototype.update.call(this, dt);
+// afterUpdate() - check to see if we collide with the player
+Enemy.prototype.afterUpdate = function() {
 
-  this.checkPlayer();
-
-  // if we go off the end. re-initialize
-  if (this.x > 515) {
-    this.init();
+  if (this.collidesWith(player)) {
+    Engine.stop("YOU LOSE!");
   }
 
-  // if we are about to bump anyone, slow down.
-  allEnemies.forEach(function(e) {
-    if (this !== e) {
-      // not looking at ourself
-      if (this.y == e.y) {
-        // on the same row
-        if (Math.abs(this.x - e.x) < 101 && this.vx > e.vx) {
-          // we are about to collide and we are faster
-          // make sure we are not touching
-          this.x = e.x - 101;
-          // and slow down
-          this.vx = e.vx;
-        }
-      }
+  // if we collide with another enemy, swap their speed.
+  allEnemies.forEach(function(enemy) {
+    if (this.collidesWith(enemy)) {
+      var t = this.vx;
+      this.vx = enemy.vx;
+      enemy.vx = t;
+      this.vy = enemy.vy;
     }
   }, this);
 };
 
-Enemy.prototype.checkPlayer = function() {
-  if (Math.abs(this.x - player.x) < 80 && Math.abs((this.y + this.yOffset) - (player.y + player.yOffset)) < player.yOffset) {
-    // player loses
-    Engine.stop("YOU LOSE!");
-  }
+// afterStop() - reset after running off the end
+Enemy.prototype.afterStop = function() {
+  this.init();
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Player - this is the player
+////////////////////////////////////////////////////////////////////////////////
 
 var Player = function() {
   Actor.call(this, 'images/char-boy.png');
-  this.init();
 };
 Player.prototype = Object.create(Actor.prototype);
-Player.prototype.contructor = Player;
+Player.prototype.constructor = Player;
 
+// init() - set player on the home square
 Player.prototype.init = function() {
-  this.row = 5;
-  this.col = 2;
+  this.setPos(5, 2);
   this.velocity = 1000;
-  this.yOffset = 10;
 
-  // initial position
-  this.x = this.xGoal();
-  this.y = this.row * 83 - this.yOffset;
-  this.vx = 0;
-  this.vy = 0;
+  document.addEventListener('keyup', this);
 };
 
-Player.prototype.xGoal = function() {
-  return this.col * 101;
-};
-
-Player.prototype.yGoal = function() {
-  return this.row * 83 - this.yOffset;
-};
-
-Player.prototype.update = function(dt) {
-  Actor.prototype.update.call(this, dt);
-
-  // stop moving when you get to the goal square
-  if (Math.abs(this.x - this.xGoal()) < Math.abs(dt * this.vx)) {
-    this.x = this.xGoal();
-    this.vx = 0;
-    // this.log("p");
-  }
-  if (Math.abs(this.y - this.yGoal()) < Math.abs(dt * this.vy)) {
-    this.y = this.yGoal();
-    this.vy = 0;
-    // this.log("p");
-  }
-
-  this.checkSuccess();
-};
-
-Player.prototype.checkSuccess = function() {
-  if (this.y <= -this.yOffset) {
+// afterUpdate() - check for a win
+Player.prototype.afterUpdate = function() {
+  if (this.y <= 0) {
     // player wins
-    this.log("player");
+    //this.log("player");
+    document.removeEventListener('keyup', this);
     Engine.stop("YOU WIN!");
   }
 };
 
-Player.prototype.handleInput = function(key) {
-  switch (key) {
-    case 'left':
-      if (this.col > 0) {
-        this.col = this.col - 1;
-        this.vx = -this.velocity;
-        this.vy = 0;
-      }
-      break;
-    case 'right':
-      if (this.col < 4) {
-        this.col = this.col + 1;
-        this.vx = this.velocity;
-        this.vy = 0;
-      }
-      break;
-    case 'up':
-      if (this.row > 0) {
-        this.row = this.row - 1;
-        this.vx = 0;
-        this.vy = -this.velocity;
-      }
-      break;
-    case 'down':
-      if (this.row < 5) {
-        this.row = this.row + 1;
-        this.vx = 0;
-        this.vy = this.velocity;
+// moveUp()
+Player.prototype.moveUp = function() {
+  if (this.getRow() > 0) {
+    this.moveBy(-1, 0);
+  }
+};
+
+// moveDown()
+Player.prototype.moveDown = function() {
+  if (this.getRow() < 5) {
+    this.moveBy(1, 0);
+  }
+};
+
+// moveLeft()
+Player.prototype.moveLeft = function() {
+  if (this.getCol() > 0) {
+    this.moveBy(0, -1);
+  }
+};
+
+// moveRight()
+Player.prototype.moveRight = function() {
+  if (this.getCol() < 4) {
+    this.moveBy(0, 1);
+  }
+};
+
+Player.prototype.handleEvent = function(event) {
+  switch (event.type) {
+    case 'keyup':
+    var allowedKeys = {
+          37: this.moveLeft,
+          38: this.moveUp,
+          39: this.moveRight,
+          40: this.moveDown
+        };
+      var move = allowedKeys[event.keyCode];
+      if (move) {
+        move.call(this);
       }
       break;
     default:
       // ignore
   }
 };
-
-
-// Now instantiate your objects.
-// Place all enemy objects in an array called allEnemies
-// Place the player object in a variable called player
-var allEnemies = [];
-
-var i;
-for (i = 0; i < 5; i++) {
-  allEnemies.push(new Enemy());
-}
-var player = new Player();
-
-
-// This listens for key presses and sends the keys to your
-// Player.handleInput() method. You don't need to modify this.
-document.addEventListener('keyup', function(e) {
-    var allowedKeys = {
-        37: 'left',
-        38: 'up',
-        39: 'right',
-        40: 'down'
-    };
-
-    player.handleInput(allowedKeys[e.keyCode]);
-});

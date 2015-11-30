@@ -199,10 +199,16 @@ var Engine = (function(global) {
         win.clearTimeout(timeoutID);
       }
 
-      player.init();
-      allEnemies.forEach(function(e) {
-        e.init();
-      });
+      // player.init();
+      // allEnemies.forEach(function(e) {
+      //   e.init();
+      // });
+      global.player = new Player();
+      global.allEnemies = [];
+      for (var i = 0; i < 3; i++) {
+        global.allEnemies.push(new Enemy());
+      }
+
       message = "";
       running = true;
     }
