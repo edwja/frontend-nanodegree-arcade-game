@@ -48,8 +48,8 @@ Actor.prototype.update = function(dt) {
     this.vy = 0;
   }
 
-  if (this.vx == 0 && this.vy == 0) {
-    this.afterStop();
+  if (this.vx === 0 && this.vy === 0) {
+    this.afterMove();
   }
 };
 
@@ -58,18 +58,18 @@ Actor.prototype.afterUpdate = function() {
   //
 };
 
-// afterStop() - called after the actor stops its move
-Actor.prototype.afterStop = function() {
+// afterMove() - called after the actor stops its move
+Actor.prototype.afterMove = function() {
   //
 };
 
 // render() - render the sprite in the current position
 Actor.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y - 12);
 };
 
-// setPos() - set the actor's current location and stop it
-Actor.prototype.setPos = function(row, col) {
+// teleportTo() - set the actor's current location and stop it
+Actor.prototype.teleportTo = function(row, col) {
   this.x = col * 101;
   this.y = row * 83;
   this.xt = this.x;
@@ -96,20 +96,20 @@ Actor.prototype.moveTo = function(row, col) {
   }
 };
 
-// moveBy() - set the actor's target relative to the existing target
-Actor.prototype.moveBy = function(deltaRow, deltaCol) {
+// stepTo() - set the actor's target relative to the existing target
+Actor.prototype.stepTo = function(deltaRow, deltaCol) {
   this.moveTo(this.getRow() + deltaRow, this.getCol() + deltaCol);
 };
 
 // getRow() - get the target row
 Actor.prototype.getRow = function() {
   return this.yt / 83;
-}
+};
 
 // getCol() - get the target columns
 Actor.prototype.getCol = function() {
   return this.xt / 101;
-}
+};
 
 // collidesWith() - true if the actor is colliding with another
 Actor.prototype.collidesWith = function(actor) {
@@ -145,8 +145,9 @@ Enemy.prototype.init = function() {
       col = -1,
       velocity = Math.random() * 500 + 100;
 
-  this.setPos(row, col);
+  this.teleportTo(row, col);
   this.velocity = velocity;
+
   this.moveTo(row, 6);
 };
 
@@ -163,13 +164,14 @@ Enemy.prototype.afterUpdate = function() {
       var t = this.vx;
       this.vx = enemy.vx;
       enemy.vx = t;
+
       this.vy = enemy.vy;
     }
   }, this);
 };
 
-// afterStop() - reset after running off the end
-Enemy.prototype.afterStop = function() {
+// afterMove() - reset after running off the end
+Enemy.prototype.afterMove = function() {
   this.init();
 };
 
@@ -185,7 +187,7 @@ Player.prototype.constructor = Player;
 
 // init() - set player on the home square
 Player.prototype.init = function() {
-  this.setPos(5, 2);
+  this.teleportTo(5, 2);
   this.velocity = 1000;
 
   document.addEventListener('keyup', this);
@@ -204,28 +206,28 @@ Player.prototype.afterUpdate = function() {
 // moveUp()
 Player.prototype.moveUp = function() {
   if (this.getRow() > 0) {
-    this.moveBy(-1, 0);
+    this.stepTo(-1, 0);
   }
 };
 
 // moveDown()
 Player.prototype.moveDown = function() {
   if (this.getRow() < 5) {
-    this.moveBy(1, 0);
+    this.stepTo(1, 0);
   }
 };
 
 // moveLeft()
 Player.prototype.moveLeft = function() {
   if (this.getCol() > 0) {
-    this.moveBy(0, -1);
+    this.stepTo(0, -1);
   }
 };
 
 // moveRight()
 Player.prototype.moveRight = function() {
   if (this.getCol() < 4) {
-    this.moveBy(0, 1);
+    this.stepTo(0, 1);
   }
 };
 

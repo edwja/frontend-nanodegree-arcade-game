@@ -205,7 +205,7 @@ var Engine = (function(global) {
       // });
       global.player = new Player();
       global.allEnemies = [];
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 5; i++) {
         global.allEnemies.push(new Enemy());
       }
 
